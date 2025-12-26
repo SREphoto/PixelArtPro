@@ -1,0 +1,7 @@
+{
+  "name": "PixelArtPro",
+  "description": "A full-featured pixel art creation suite powered by Google's Gemini models. Generate sprites and animations, create entire sprite sheets, and use an integrated pixel editor with AI-powered 'Magic Edit' tools.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
