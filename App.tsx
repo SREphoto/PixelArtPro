@@ -4,9 +4,10 @@ import PromptForm from './components/PromptForm';
 import ImageDisplay from './components/ImageDisplay';
 import Editor from './components/Editor';
 import { generatePixelArtImage, generatePixelArtAnimation, generateSpriteSheet, generateImageFromImage, generateSpriteSheetFromImage } from './services/geminiService';
-import { SparklesIcon, HistoryIcon, TrashIcon, PanelLeftCloseIcon, PanelRightCloseIcon } from './components/icons';
+import { SparklesIcon, HistoryIcon, TrashIcon, PanelLeftCloseIcon, PanelRightCloseIcon, SettingsIcon } from './components/icons';
 import type { StylePreset, GenerationMode } from './components/PromptForm';
 import type { EditorState } from './components/Editor';
+import SettingsModal from './components/SettingsModal';
 
 
 // UTILS - Inlined for simplicity
@@ -72,6 +73,7 @@ function App() {
 
   const [activeTab, setActiveTab] = useState('Generate');
   const [editorState, setEditorState] = useState<EditorState | null>(null);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const [panels, setPanels] = useState({ left: true, right: true });
 
@@ -253,11 +255,18 @@ function App() {
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col items-center p-4 selection:bg-fuchsia-500 selection:text-white">
       <div className="w-full max-w-screen-2xl mx-auto flex flex-col items-center">
-        <header className="mb-4 text-center">
+        <header className="mb-4 text-center relative">
           <h1 className="text-2xl md:text-4xl font-bold text-cyan-400 flex items-center justify-center gap-4 animate-[pulse_5s_ease-in-out_infinite]">
             <SparklesIcon className="w-8 h-8 md:w-12 md:h-12 text-fuchsia-400" />
             PixelArtPro
           </h1>
+          <button
+            onClick={() => setIsSettingsOpen(true)}
+            className="absolute right-0 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-cyan-400 transition-colors"
+            title="Settings"
+          >
+            <SettingsIcon className="w-6 h-6" />
+          </button>
         </header>
 
         <div className="w-full flex-grow grid grid-cols-[auto,1fr,auto] gap-4 items-start">
@@ -328,8 +337,10 @@ function App() {
             </div>
           </aside>
         </div>
+        </div>
       </div>
-    </div>
+      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+    </div >
   );
 }
 

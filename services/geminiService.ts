@@ -2,11 +2,13 @@
 import { GoogleGenAI, Modality, Type, GenerateContentResponse } from "@google/genai";
 import type { StylePreset } from '../components/PromptForm';
 
-const getApiKey = () => import.meta.env.VITE_API_KEY || '';
+const getApiKey = () => {
+    return localStorage.getItem('GEMINI_API_KEY') || import.meta.env.VITE_API_KEY || '';
+};
 
 const getAIClient = () => {
     const key = getApiKey();
-    if (!key) throw new Error("API Key is missing. Please set VITE_API_KEY.");
+    if (!key) throw new Error("API Key is missing. Please add it in Settings.");
     return new GoogleGenAI({ apiKey: key });
 };
 
