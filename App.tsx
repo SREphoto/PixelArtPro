@@ -337,10 +337,9 @@ function App() {
             </div>
           </aside>
         </div>
-        </div>
       </div>
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
-    </div >
+    </div>
   );
 }
 
