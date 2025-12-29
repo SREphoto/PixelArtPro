@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@google/genai": "^1.8.0",
-    "gif-encoder-2": "^1.0.5",
+    "gifenc": "^1.0.3",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },

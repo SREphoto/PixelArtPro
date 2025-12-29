@@ -1011,27 +1011,32 @@ const Editor: React.FC<EditorProps> = ({ initialState, onSave }) => {
             <div className="mt-4 border-t border-slate-600 pt-4">
               <h3 className="text-sm font-bold mb-2">Animations</h3>
               <button onClick={async () => {
-                const GifEncoder = (await import('gif-encoder-2')).default;
-                const encoder = new GifEncoder(canvasWidth, canvasHeight);
-                encoder.setDelay(1000 / fps);
-                encoder.start();
+                const { GIFEncoder, quantize, applyPalette } = await import('gifenc');
+
+                const encoder = new GIFEncoder();
 
                 const tempCanvas = document.createElement('canvas');
                 tempCanvas.width = canvasWidth;
                 tempCanvas.height = canvasHeight;
-                const tempCtx = tempCanvas.getContext('2d')!;
+                const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true })!;
 
                 frames.forEach(frame => {
                   tempCtx.clearRect(0, 0, canvasWidth, canvasHeight);
                   // Draw layers
                   frame.layers.forEach(l => {
-                    if (l.isVisible) tempCtx.drawImage(l.canvas, l.offset.x, l.offset.y);
+                    if (l.isVisible) tempCtx.drawImage(l.canvas, l.offset.y, l.offset.y);
                   });
-                  encoder.addFrame(tempCtx);
+
+                  const { data } = tempCtx.getImageData(0, 0, canvasWidth, canvasHeight);
+                  const palette = quantize(data, 256);
+                  const index = applyPalette(data, palette);
+
+                  encoder.writeFrame(index, canvasWidth, canvasHeight, { palette, delay: 1000 / fps });
                 });
 
                 encoder.finish();
-                const buffer = encoder.out.getData();
+
+                const buffer = encoder.bytesView();
                 const blob = new Blob([buffer], { type: 'image/gif' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
