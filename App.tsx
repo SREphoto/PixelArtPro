@@ -29,7 +29,7 @@ export interface GeneratedAsset {
 }
 
 export interface HistoryItem {
-  id:string;
+  id: string;
   asset: GeneratedAsset;
   timestamp: number;
 }
@@ -42,11 +42,10 @@ const AppTabs: React.FC<{ activeTab: string; onTabChange: (tab: string) => void 
         <button
           key={tab}
           onClick={() => onTabChange(tab)}
-          className={`px-4 py-3 text-sm font-bold transition-all duration-200 border-2 rounded-lg flex items-center justify-center text-center shadow-md shadow-black/40 transform hover:-translate-y-px active:translate-y-0 active:shadow-inner ${
-            activeTab.toLowerCase() === tab.toLowerCase()
-              ? 'bg-cyan-400 text-slate-900 border-cyan-300 shadow-inner'
-              : 'bg-slate-800 text-slate-300 border-slate-600 hover:bg-slate-700 hover:border-slate-500'
-          }`}
+          className={`px-4 py-3 text-sm font-bold transition-all duration-200 border-2 rounded-lg flex items-center justify-center text-center shadow-md shadow-black/40 transform hover:-translate-y-px active:translate-y-0 active:shadow-inner ${activeTab.toLowerCase() === tab.toLowerCase()
+            ? 'bg-cyan-400 text-slate-900 border-cyan-300 shadow-inner'
+            : 'bg-slate-800 text-slate-300 border-slate-600 hover:bg-slate-700 hover:border-slate-500'
+            }`}
         >
           {tab}
         </button>
@@ -63,10 +62,10 @@ function App() {
   const [negativePrompt, setNegativePrompt] = useState<string>('blurry, text, watermark');
   const [generationType, setGenerationType] = useState<'image' | 'animation'>('image');
   const [stylePreset, setStylePreset] = useState<StylePreset>('16-bit');
-  
+
   const [activeHistoryItem, setActiveHistoryItem] = useState<HistoryItem | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
-  
+
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [loadingMessage, setLoadingMessage] = useState('Conjuring pixels...');
@@ -98,7 +97,7 @@ function App() {
       } else {
         localStorage.removeItem('pixelArtHistoryV2');
       }
-    } catch(e) { console.error("Failed to save history", e); }
+    } catch (e) { console.error("Failed to save history", e); }
   }, [history]);
 
   // Memory cleanup
@@ -111,41 +110,42 @@ function App() {
       });
     };
   }, [history]);
-  
+
   const addHistoryItems = (assets: GeneratedAsset[]) => {
-      const newItems: HistoryItem[] = assets.map(asset => ({ id: crypto.randomUUID(), asset, timestamp: Date.now() }));
-      setHistory(prev => [...newItems, ...prev]);
-      if (newItems.length > 0) {
-        setActiveHistoryItem(newItems[0]);
-      }
+    const newItems: HistoryItem[] = assets.map(asset => ({ id: crypto.randomUUID(), asset, timestamp: Date.now() }));
+    setHistory(prev => [...newItems, ...prev]);
+    if (newItems.length > 0) {
+      setActiveHistoryItem(newItems[0]);
+    }
   };
 
   const handleTabChange = (tab: string) => {
     if (tab === 'Editor' && !editorState) {
-        const defaultWidth = 64;
-        const defaultHeight = 64;
-        const canvas = document.createElement('canvas');
-        canvas.width = defaultWidth;
-        canvas.height = defaultHeight;
-        const ctx = canvas.getContext('2d')!;
-        ctx.fillStyle = 'rgba(0,0,0,0)';
-        ctx.fillRect(0, 0, defaultWidth, defaultHeight);
+      const defaultWidth = 64;
+      const defaultHeight = 64;
+      const canvas = document.createElement('canvas');
+      canvas.width = defaultWidth;
+      canvas.height = defaultHeight;
+      const ctx = canvas.getContext('2d')!;
+      ctx.fillStyle = 'rgba(0,0,0,0)';
+      ctx.fillRect(0, 0, defaultWidth, defaultHeight);
 
-        const img = new Image();
-        img.onload = () => {
-            setEditorState({
-                sourceImage: img,
-                layers: [],
-                history: [],
-                historyIndex: -1,
-            });
-            setActiveTab('Editor');
-        };
-        img.onerror = () => {
-            setError("Failed to create a new canvas for the editor.");
-        }
-        img.src = canvas.toDataURL();
-        return; 
+      const img = new Image();
+      img.onload = () => {
+        setEditorState({
+          sourceImage: img,
+          frames: [], // Initial state, will be populated by Editor's useEffect
+          currentFrameIndex: 0,
+          history: [],
+          historyIndex: -1,
+        });
+        setActiveTab('Editor');
+      };
+      img.onerror = () => {
+        setError("Failed to create a new canvas for the editor.");
+      }
+      img.src = canvas.toDataURL();
+      return;
     }
     setActiveTab(tab);
   };
@@ -156,50 +156,50 @@ function App() {
     setError(null);
 
     try {
-        const { baseImage, ...restData } = generationData;
+      const { baseImage, ...restData } = generationData;
 
-        if (mode === 'single') {
-            const { prompt, negativePrompt, stylePreset, generationType, animationPrompt, numImages, temperature } = restData;
-            if (baseImage) {
-                 if (generationType === 'image') {
-                    setLoadingMessage('Altering image with AI...');
-                    const fullPrompt = `${prompt}. Style: ${stylePreset}. ${negativePrompt ? `Avoid: ${negativePrompt}` : ''}`;
-                    const url = await generateImageFromImage(baseImage, fullPrompt, temperature);
-                    addHistoryItems([{ id: crypto.randomUUID(), url, type: 'image', promptData: restData }]);
-                } else { // animation
-                    setLoadingMessage('Animating from image... this can take a minute.');
-                    const url = await generatePixelArtAnimation(prompt, animationPrompt, negativePrompt, stylePreset, baseImage);
-                    addHistoryItems([{ id: crypto.randomUUID(), url, type: 'animation', promptData: restData }]);
-                }
-            } else {
-                 if (generationType === 'image') {
-                    setLoadingMessage(numImages > 1 ? 'Generating sprite variations...' : 'Generating sprite...');
-                    const urls = await generatePixelArtImage(prompt, negativePrompt, stylePreset, numImages);
-                    const newAssets: GeneratedAsset[] = urls.map(url => ({
-                        id: crypto.randomUUID(),
-                        url,
-                        type: 'image',
-                        promptData: restData
-                    }));
-                    addHistoryItems(newAssets);
-                } else { // animation
-                    setLoadingMessage('Animating sprite... this can take a minute.');
-                    const url = await generatePixelArtAnimation(prompt, animationPrompt, negativePrompt, stylePreset);
-                    addHistoryItems([{ id: crypto.randomUUID(), url, type: 'animation', promptData: restData }]);
-                }
-            }
-        } else if (mode === 'spritesheet') {
-            const { prompt, negativePrompt, stylePreset, actions, dimensions, temperature } = restData;
-            if (baseImage) {
-                setLoadingMessage('Building sprite sheet from image...');
-                const url = await generateSpriteSheetFromImage(baseImage, prompt, negativePrompt, stylePreset, actions, dimensions, temperature);
-                addHistoryItems([{ id: crypto.randomUUID(), url, type: 'spritesheet', promptData: restData }]);
-            } else {
-                setLoadingMessage('Constructing sprite sheet...');
-                const url = await generateSpriteSheet(prompt, negativePrompt, stylePreset, actions, dimensions);
-                addHistoryItems([{ id: crypto.randomUUID(), url, type: 'spritesheet', promptData: restData }]);
-            }
+      if (mode === 'single') {
+        const { prompt, negativePrompt, stylePreset, generationType, animationPrompt, numImages, temperature } = restData;
+        if (baseImage) {
+          if (generationType === 'image') {
+            setLoadingMessage('Altering image with AI...');
+            const fullPrompt = `${prompt}. Style: ${stylePreset}. ${negativePrompt ? `Avoid: ${negativePrompt}` : ''}`;
+            const url = await generateImageFromImage(baseImage, fullPrompt, temperature);
+            addHistoryItems([{ id: crypto.randomUUID(), url, type: 'image', promptData: restData }]);
+          } else { // animation
+            setLoadingMessage('Animating from image... this can take a minute.');
+            const url = await generatePixelArtAnimation(prompt, animationPrompt, negativePrompt, stylePreset, baseImage);
+            addHistoryItems([{ id: crypto.randomUUID(), url, type: 'animation', promptData: restData }]);
+          }
+        } else {
+          if (generationType === 'image') {
+            setLoadingMessage(numImages > 1 ? 'Generating sprite variations...' : 'Generating sprite...');
+            const urls = await generatePixelArtImage(prompt, negativePrompt, stylePreset, numImages);
+            const newAssets: GeneratedAsset[] = urls.map(url => ({
+              id: crypto.randomUUID(),
+              url,
+              type: 'image',
+              promptData: restData
+            }));
+            addHistoryItems(newAssets);
+          } else { // animation
+            setLoadingMessage('Animating sprite... this can take a minute.');
+            const url = await generatePixelArtAnimation(prompt, animationPrompt, negativePrompt, stylePreset);
+            addHistoryItems([{ id: crypto.randomUUID(), url, type: 'animation', promptData: restData }]);
+          }
         }
+      } else if (mode === 'spritesheet') {
+        const { prompt, negativePrompt, stylePreset, actions, dimensions, temperature } = restData;
+        if (baseImage) {
+          setLoadingMessage('Building sprite sheet from image...');
+          const url = await generateSpriteSheetFromImage(baseImage, prompt, negativePrompt, stylePreset, actions, dimensions, temperature);
+          addHistoryItems([{ id: crypto.randomUUID(), url, type: 'spritesheet', promptData: restData }]);
+        } else {
+          setLoadingMessage('Constructing sprite sheet...');
+          const url = await generateSpriteSheet(prompt, negativePrompt, stylePreset, actions, dimensions);
+          addHistoryItems([{ id: crypto.randomUUID(), url, type: 'spritesheet', promptData: restData }]);
+        }
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
       setError(`Failed to generate asset. ${errorMessage}`);
@@ -213,7 +213,7 @@ function App() {
   const handleSelectHistoryItem = (item: HistoryItem) => {
     setActiveHistoryItem(item);
   };
-  
+
   const handleClearHistory = () => {
     if (!window.confirm("Are you sure? This will delete all items from your history.")) return;
     history.forEach(item => { if (item.asset.url.startsWith('blob:')) URL.revokeObjectURL(item.asset.url) });
@@ -225,28 +225,29 @@ function App() {
     const img = new Image();
     img.crossOrigin = "anonymous";
     img.onload = () => {
-        setEditorState({
-            sourceImage: img,
-            layers: [],
-            history: [],
-            historyIndex: -1
-        });
-        setActiveTab('Editor');
+      setEditorState({
+        sourceImage: img,
+        frames: [],
+        currentFrameIndex: 0,
+        history: [],
+        historyIndex: -1
+      });
+      setActiveTab('Editor');
     };
     img.onerror = () => {
-        setError("Could not load image into editor. The resource might be cross-origin or invalid.");
+      setError("Could not load image into editor. The resource might be cross-origin or invalid.");
     }
     img.src = asset.url;
   }
-  
+
   const handleSaveEditedAsset = (dataUrl: string) => {
-     addHistoryItems([{
-        id: crypto.randomUUID(),
-        url: dataUrl,
-        type: 'image',
-        promptData: { prompt: "Edited in Studio" }
-     }]);
-     handleTabChange('Generate');
+    addHistoryItems([{
+      id: crypto.randomUUID(),
+      url: dataUrl,
+      type: 'image',
+      promptData: { prompt: "Edited in Studio" }
+    }]);
+    handleTabChange('Generate');
   }
 
   return (
@@ -260,72 +261,72 @@ function App() {
         </header>
 
         <div className="w-full flex-grow grid grid-cols-[auto,1fr,auto] gap-4 items-start">
-            {/* Left Panel */}
-            <aside className={`transition-all duration-300 ${panels.left ? 'w-96' : 'w-8'}`}>
-              <div className={`bg-slate-800/50 border-2 border-slate-700 rounded-lg shadow-lg h-full flex flex-col transition-opacity duration-300 ${panels.left ? 'opacity-100' : 'opacity-0'}`}>
-                {panels.left && (
-                  <>
-                    <div className="p-4 border-b-2 border-slate-700">
-                      <AppTabs activeTab={activeTab} onTabChange={handleTabChange} />
-                    </div>
+          {/* Left Panel */}
+          <aside className={`transition-all duration-300 ${panels.left ? 'w-96' : 'w-8'}`}>
+            <div className={`bg-slate-800/50 border-2 border-slate-700 rounded-lg shadow-lg h-full flex flex-col transition-opacity duration-300 ${panels.left ? 'opacity-100' : 'opacity-0'}`}>
+              {panels.left && (
+                <>
+                  <div className="p-4 border-b-2 border-slate-700">
+                    <AppTabs activeTab={activeTab} onTabChange={handleTabChange} />
+                  </div>
 
-                    <div className="flex-grow overflow-y-auto p-4">
-                      {activeTab === 'Generate' && (
-                        <PromptForm
-                          generationMode='single'
-                          onSubmit={handleGenerate}
-                          isLoading={isLoading}
-                        />
-                      )}
-                      {activeTab === 'Sprite Sheet' && (
-                        <PromptForm
-                          generationMode='spritesheet'
-                          onSubmit={handleGenerate}
-                          isLoading={isLoading}
-                        />
-                      )}
-                      {activeTab === 'Editor' && (
-                        <div className="text-center p-4 text-slate-400 text-sm">
-                            <p>Pixel Art Studio is active.</p>
-                            <p className="mt-2">Use the toolbars around the canvas to create your art.</p>
-                        </div>
-                      )}
-                    </div>
-                  </>
-                )}
-              </div>
-            </aside>
-
-            {/* Main Content */}
-            <main className="flex-grow flex flex-col items-center justify-center h-full">
-               <button onClick={() => setPanels(p => ({...p, left: !p.left}))} className="absolute left-2 top-1/2 -translate-y-1/2 z-20 bg-slate-700 p-1 rounded-full text-slate-300 hover:bg-cyan-500"><PanelLeftCloseIcon className={`w-5 h-5 transition-transform ${panels.left ? '' : 'rotate-180'}`}/></button>
-               <button onClick={() => setPanels(p => ({...p, right: !p.right}))} className="absolute right-2 top-1/2 -translate-y-1/2 z-20 bg-slate-700 p-1 rounded-full text-slate-300 hover:bg-cyan-500"><PanelRightCloseIcon className={`w-5 h-5 transition-transform ${panels.right ? '' : 'rotate-180'}`}/></button>
-              
-              {activeTab === 'Editor' ? (
-                  editorState ? (
-                      <Editor initialState={editorState} onSave={handleSaveEditedAsset} />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-slate-800/50 border-4 border-dashed border-slate-600 rounded-lg p-4">
-                        <p className="text-slate-500 text-center text-sm">Loading editor...</p>
-                    </div>
-                  )
-              ) : (
-                 <ImageDisplay
-                    asset={displayedAsset}
-                    isLoading={isLoading}
-                    error={error}
-                    loadingMessage={loadingMessage}
-                    onEdit={handleEditAsset}
-                 />
+                  <div className="flex-grow overflow-y-auto p-4">
+                    {activeTab === 'Generate' && (
+                      <PromptForm
+                        generationMode='single'
+                        onSubmit={handleGenerate}
+                        isLoading={isLoading}
+                      />
+                    )}
+                    {activeTab === 'Sprite Sheet' && (
+                      <PromptForm
+                        generationMode='spritesheet'
+                        onSubmit={handleGenerate}
+                        isLoading={isLoading}
+                      />
+                    )}
+                    {activeTab === 'Editor' && (
+                      <div className="text-center p-4 text-slate-400 text-sm">
+                        <p>Pixel Art Studio is active.</p>
+                        <p className="mt-2">Use the toolbars around the canvas to create your art.</p>
+                      </div>
+                    )}
+                  </div>
+                </>
               )}
-            </main>
-            
-            {/* Right Panel */}
-            <aside className={`transition-all duration-300 ${panels.right ? 'w-80' : 'w-8'}`}>
-                <div className={`bg-slate-800/50 border-2 border-slate-700 rounded-lg shadow-lg h-[calc(100vh-8rem)] flex flex-col transition-opacity duration-300 ${panels.right ? 'opacity-100' : 'opacity-0'}`}>
-                    {panels.right && <HistoryPanel history={history} onSelect={handleSelectHistoryItem} onClear={handleClearHistory} activeItemId={activeHistoryItem?.id} />}
+            </div>
+          </aside>
+
+          {/* Main Content */}
+          <main className="flex-grow flex flex-col items-center justify-center h-full">
+            <button onClick={() => setPanels(p => ({ ...p, left: !p.left }))} className="absolute left-2 top-1/2 -translate-y-1/2 z-20 bg-slate-700 p-1 rounded-full text-slate-300 hover:bg-cyan-500"><PanelLeftCloseIcon className={`w-5 h-5 transition-transform ${panels.left ? '' : 'rotate-180'}`} /></button>
+            <button onClick={() => setPanels(p => ({ ...p, right: !p.right }))} className="absolute right-2 top-1/2 -translate-y-1/2 z-20 bg-slate-700 p-1 rounded-full text-slate-300 hover:bg-cyan-500"><PanelRightCloseIcon className={`w-5 h-5 transition-transform ${panels.right ? '' : 'rotate-180'}`} /></button>
+
+            {activeTab === 'Editor' ? (
+              editorState ? (
+                <Editor initialState={editorState} onSave={handleSaveEditedAsset} />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-slate-800/50 border-4 border-dashed border-slate-600 rounded-lg p-4">
+                  <p className="text-slate-500 text-center text-sm">Loading editor...</p>
                 </div>
-            </aside>
+              )
+            ) : (
+              <ImageDisplay
+                asset={displayedAsset}
+                isLoading={isLoading}
+                error={error}
+                loadingMessage={loadingMessage}
+                onEdit={handleEditAsset}
+              />
+            )}
+          </main>
+
+          {/* Right Panel */}
+          <aside className={`transition-all duration-300 ${panels.right ? 'w-80' : 'w-8'}`}>
+            <div className={`bg-slate-800/50 border-2 border-slate-700 rounded-lg shadow-lg h-[calc(100vh-8rem)] flex flex-col transition-opacity duration-300 ${panels.right ? 'opacity-100' : 'opacity-0'}`}>
+              {panels.right && <HistoryPanel history={history} onSelect={handleSelectHistoryItem} onClear={handleClearHistory} activeItemId={activeHistoryItem?.id} />}
+            </div>
+          </aside>
         </div>
       </div>
     </div>
