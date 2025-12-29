@@ -16,8 +16,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     }, [isOpen]);
 
     const handleSave = () => {
-        localStorage.setItem('GEMINI_API_KEY', apiKey);
+        localStorage.setItem('GEMINI_API_KEY', apiKey.trim());
         onClose();
+        // Reload to ensure services pick up the new key if they aren't reactive
+        window.location.reload();
     };
 
     const handleClear = () => {
